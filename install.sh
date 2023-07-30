@@ -107,6 +107,8 @@ install_project() {
   curl -sLo "/opt/fortify-server/${package_name}.tar.gz" $package_url
   # Extract the package and move the binary to /root
   tar -xzf "/opt/fortify-server/${package_name}.tar.gz" -C /opt/fortify-server
+  # Change the singbox long directory name
+  mv "/opt/fortify-server/${package_name}" "/opt/fortify-server/singbox"
   # Cleanup the package
   rm -r "/opt/fortify-server/${package_name}.tar.gz"
   # Copy the default sing-box configuration file
