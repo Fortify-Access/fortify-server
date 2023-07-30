@@ -6,6 +6,7 @@ import redis
 config = Config('.env')
 DATABASE = config('DATABASE', default='sqlite:///fortify.db')
 AUTH_KEY = config('AUTH_KEY')
+API_PORT = config('API_PORT', cast=int, default=8000)
 engine = create_engine(DATABASE)
 redis_client = redis.StrictRedis(host='0.0.0.0', port=4323)
 

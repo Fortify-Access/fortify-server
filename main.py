@@ -5,6 +5,7 @@ from starlette.routing import Route
 from api.middleware import TokenAuthMiddleware
 from api import endpoints
 from api import tasks
+from api import extentions
 
 @contextlib.asynccontextmanager
 async def lifespan(app):
@@ -33,5 +34,5 @@ if __name__ == "__main__":
     from api.extentions import engine
 
     SQLModel.metadata.create_all(engine)
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=extentions.API_PORT)
 
