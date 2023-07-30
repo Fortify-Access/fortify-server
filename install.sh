@@ -70,13 +70,7 @@ install_project() {
   pip install -r requirements.txt
 
   auth_key=$(generate_token)
-  env_content=$(cat << EOF
-    AUTH_KEY=$auth_key
-    FORTIFY_SERVER_VERSION=1.0.0
-    SINGBOX_VERSION=1.3.0
-    EOF
-  )
-  echo "$env_content" > .env
+  echo -e "AUTH_KEY=$auth_key\nFORTIFY_SERVER_VERSION=1.0.0\nSINGBOX_VERSION=1.3.0" > .env
 
   # Step 4: Downlaod and extract sing-box binary
   echo "Step 4: Downloading sing-box..."
