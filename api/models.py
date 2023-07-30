@@ -36,9 +36,12 @@ class InboundModel(SQLModel, table=True):
         return json.dumps(data)
 
     def to_singbox_dict(self):
-        data = self.dict(exclude={'id', 'traffic_usage', 'traffic_limitation', 'creation_date', 'expiration_date', 'is_active'})
+        data = self.dict(
+                    exclude={'id', 'traffic_usage', 'traffic_limitation', 'creation_date', 'expiration_date', 'is_active'},
+                    exclude_unset=True
+                )
         data["users"] = [user.dict(exclude={'id', 'inbound_id'}) for user in self.users]
-        data["tls"] = self.tls.dict(exclude={'id', 'inbound_id'})
+        data["tls"] = self.tls.to_singbox_dict()
         return data
 
 
@@ -61,3 +64,10 @@ class TlsModel(SQLModel, table=True):
     short_id: str = Field(unique=True)
 
     inbound_id: Optional[int] = Field(foreign_key='inboundmodel.id', index=True)
+
+    def to_singbox_dict(self):
+        data = self.dict(include={'server_name'})
+        data["enabled"] = True
+        data[self.type] = {"enabled": True, "private_key": self.private_key, "short_id": self.short_id}
+        data[self.type]["handshake"] = {"server": self.handshake_server, "server_port": self.handshake_port}
+        return data
