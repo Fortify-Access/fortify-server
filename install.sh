@@ -8,6 +8,9 @@ is_ubuntu() {
 is_centos() {
     [[ -f /etc/centos-release ]] || grep -qi "CentOS" /etc/os-release
 }
+generate_token() {
+    tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 64
+}
 
 # Install Docker on Ubuntu
 install_docker_ubuntu() {
@@ -65,7 +68,15 @@ install_project() {
   python3 -m venv venv
   source venv/bin/activate
   pip install -r requirements.txt
-  echo "ALLOWED_HOSTS=$server_ip:8000" > .env
+
+  auth_key=$(generate_token)
+  env_content=$(cat << EOF
+    AUTH_KEY=$auth_key
+    FORTIFY_SERVER_VERSION=1.0.0
+    SINGBOX_VERSION=1.3.0
+    EOF
+  )
+  echo "$env_content" > .env
 
   # Step 4: Downlaod and extract sing-box binary
   echo "Step 4: Downloading sing-box..."
@@ -106,4 +117,5 @@ install_project() {
 # Step 8: Initialize the project
 install_docker_and_redis
 install_project
-echo "Installation completed successfully.
+echo "Installation completed successfully."
+echo -e "IMPORTANT:\nHere is your generated auth key to access this server:\n$auth_key\nCopy this key and paste it to your Fortify Assess panel."
