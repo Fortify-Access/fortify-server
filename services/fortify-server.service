@@ -1,0 +1,10 @@
+[Unit]
+Description=Fortify Server Script service
+
+[Service]
+User=root
+WorkingDirectory=/opt/fortify-server
+ExecStart=/opt/fortify-server/venv/bin/python main.py
+
+[Install]
+WantedBy=multi-user.target
