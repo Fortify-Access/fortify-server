@@ -53,11 +53,13 @@ install_project() {
   cd fortify-server
 
   # Step 2: Installing python virtual environment packeages
+  python_version=$(python3 -c 'import sys; version=sys.version_info[:2]; print("{0}.{1}".format(*version))')
+
   echo "Step 2: Installing python virtual environment packeages..."
   if is_ubuntu; then
-      apt install -y python3.10-venv
+      apt install -y python$python_version-venv
   elif is_centos; then
-      yum install -y python3.10-venv
+      yum install -y python$python_version-venv
   else
       echo "Unsupported OS. Only Ubuntu and CentOS are supported."
       exit 1

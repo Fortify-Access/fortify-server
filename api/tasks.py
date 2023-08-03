@@ -3,8 +3,7 @@ import pytz
 from datetime import datetime
 from sqlmodel import Session, select
 from scapy.all import AsyncSniffer, TCP
-from api import models
-from api import extentions
+from api import models, extentions
 
 async def check_expirations(period: int):
     while True:
@@ -36,14 +35,24 @@ async def check_traffic_usages():
     def packet_callback(packet):
         if extentions.redis_client.sismember('active_ports', packet[TCP].sport):
             port = packet[TCP].sport
+            upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
+            upload += len(packet)
+            extentions.redis_client.set(f"upload_{port}", upload)
+            client_ip = packet[TCP].src
+
         elif extentions.redis_client.sismember('active_ports', packet[TCP].dport):
             port = packet[TCP].dport
+            download = int(extentions.redis_client.get(f"download_{port}") or 0)
+            download += len(packet)
+            extentions.redis_client.set(f"download_{port}", download)
+            client_ip = packet[TCP].dst
+
         else:
             return
 
-        usage = int(extentions.redis_client.get(port) or 0)
-        usage += len(packet)
-        extentions.redis_client.set(port, usage)
+        if not extentions.redis_client.sismember(f"online_{port}", client_ip):
+            extentions.redis_client.sadd(f"online_{port}", client_ip)
+            extentions.redis_client.expire(f"online_{port}", 30, nx=True)
 
     sniffer = AsyncSniffer(filter="tcp", prn=packet_callback)
     sniffer.start()
@@ -53,12 +62,15 @@ async def commit_traffic_usages_to_db(period: int):
         await asyncio.sleep(period)
         for port in extentions.redis_client.smembers('active_ports'):
             port = int(port)
-            usage = int(extentions.redis_client.get(port) or 0)
+            upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
+            download = int(extentions.redis_client.get(f"download_{port}") or 0)
             with Session(extentions.engine) as session:
                 query = select(models.InboundModel).where(models.InboundModel.listen_port == port)
                 inbound = session.exec(query).first()
                 if inbound:
-                    inbound.traffic_usage = usage
+                    inbound.upload = upload
+                    inbound.download = download
+                    inbound.traffic_usage = upload + download
                     print(inbound.traffic_usage)
                     session.add(inbound)
                     session.commit()

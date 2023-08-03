@@ -19,6 +19,7 @@ app = Starlette(
     routes=[
         Route("/inbound/list", endpoint=endpoints.inbound_list, methods=["GET"]),
         Route("/inbound/get", endpoint=endpoints.inbound_get, methods=["GET"]),
+        Route("/inbound/get_last_updates", endpoint=endpoints.inbound_get_last_updates, methods=["GET"]),
         Route("/inbound/create", endpoint=endpoints.inbound_create, methods=["POST"]),
         Route("/inbound/update", endpoint=endpoints.inbound_create, methods=["PUT"]),
         Route("/inbound/delete", endpoint=endpoints.inbound_delete, methods=["DELETE"]),
