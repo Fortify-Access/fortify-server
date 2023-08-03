@@ -12,6 +12,18 @@ async def inbound_list(request):
         except Exception as e:
             return JSONResponse({"success": False, "error": str(e)}, status_code=400)
 
+async def inbound_get_last_updates(request):
+    with Session(engine) as session:
+        try:
+            query = select(models.InboundModel)
+            results = session.exec(query).all()
+            return JSONResponse({"success": True, "inbounds": [result.dict(include={'tag', 'upload', 'download', 'traffic_usage', 'is_active'}) | {
+                'online_clients': extentions.redis_client.smembers(f"online_{result.listen_port}")
+            } for result in results]})
+
+        except Exception as e:
+            return JSONResponse({"success": False, "error": str(e)}, status_code=400)
+
 async def inbound_create(request):
     with Session(engine) as session:
         try:
@@ -30,7 +42,6 @@ async def inbound_create(request):
             extentions.realod_singbox()
             return JSONResponse({"success": True, "inbound": inbound.to_completed_json()})
         except Exception as e:
-            raise e
             return JSONResponse({"success": False, "error": str(e)}, status_code=400)
 
 async def inbound_delete(request):
@@ -100,16 +111,18 @@ async def inbound_update(request):
             session.commit()
             session.refresh(inbound)
             extentions.export_inbound(old_inbound.tag)
+            extentions.redis_client.srem('active_ports', old_inbound.listen_port)
 
             if "port" in updated_fields["inbound"].keys():
-                extentions.redis_client.srem('active_ports', old_inbound.listen_port)
-                extentions.redis_client.sadd('active_ports', inbound.listen_port)
-                extentions.redis_client.set(inbound.listen_port, int(extentions.redis_client.get(old_inbound.port)))
-                extentions.redis_client.delete(old_inbound.listen_port)
+                extentions.redis_client.set(f"upload_{inbound.listen_port}", int(extentions.redis_client.get(f"upload_{old_inbound.port}")))
+                extentions.redis_client.set(f"download_{inbound.listen_port}", int(extentions.redis_client.get(f"download_{old_inbound.port}")))
+                extentions.redis_client.delete(f"upload_{old_inbound.listen_port}")
+                extentions.redis_client.delete(f"download_{old_inbound.listen_port}")
 
             if "is_active" in updated_fields["inbound"].keys():
                 if not (old_inbound.is_active == True and inbound.is_active == False):
                     extentions.import_inbound(inbound.to_singbox_dict())
+                    extentions.redis_client.sadd('active_ports', inbound.listen_port)
 
             extentions.realod_singbox()
             return JSONResponse({"success": True, "inbound": inbound.to_completed_json()})
