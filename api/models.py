@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 import pytz
 import json
+from api import extentions
 
 
 class InboundModel(SQLModel, table=True):
@@ -23,6 +24,8 @@ class InboundModel(SQLModel, table=True):
     users: List["UserModel"] = Relationship(sa_relationship_kwargs={"cascade": "delete"})
     tls: Optional["TlsModel"] = Relationship(sa_relationship_kwargs={"cascade": "delete", "uselist": False})
 
+    download: int = Field(default=0)
+    upload: int = Field(default=0)
     traffic_usage: int = Field(default=0)
     traffic_limitation: Optional[int] = Field(nullable=True)
     expiration_date: Optional[datetime] = Field(nullable=True)
@@ -31,6 +34,7 @@ class InboundModel(SQLModel, table=True):
 
     def to_completed_json(self):
         data = json.loads(self.json())
+        data["online_clients"] = extentions.redis_client.smembers(f"online_{self.listen_port}")
         data["users"] = [user.dict() for user in self.users]
         data["tls"] = self.tls.dict()
         return json.dumps(data)
@@ -38,7 +42,7 @@ class InboundModel(SQLModel, table=True):
     def to_singbox_dict(self):
         data = self.dict(
                     exclude={'id', 'traffic_usage', 'traffic_limitation', 'creation_date', 'expiration_date', 'is_active'},
-                    exclude_unset=True
+                    exclude_none=True
                 )
         data["users"] = [user.dict(exclude={'id', 'inbound_id'}) for user in self.users]
         data["tls"] = self.tls.to_singbox_dict()
@@ -68,6 +72,6 @@ class TlsModel(SQLModel, table=True):
     def to_singbox_dict(self):
         data = self.dict(include={'server_name'})
         data["enabled"] = True
-        data[self.type] = {"enabled": True, "private_key": self.private_key, "short_id": self.short_id}
+        data[self.type] = {"enabled": True, "private_key": self.private_key, "short_id": [self.short_id]}
         data[self.type]["handshake"] = {"server": self.handshake_server, "server_port": self.handshake_port}
         return data
