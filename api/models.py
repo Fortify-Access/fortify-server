@@ -34,7 +34,7 @@ class InboundModel(SQLModel, table=True):
 
     def to_completed_json(self):
         data = json.loads(self.json())
-        data["online_clients"] = extentions.redis_client.smembers(f"online_{self.listen_port}")
+        data["online_clients"] = list(extentions.redis_client.smembers(f"online_{self.listen_port}"))
         data["users"] = [user.dict() for user in self.users]
         data["tls"] = self.tls.dict()
         return json.dumps(data)

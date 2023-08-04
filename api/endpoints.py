@@ -30,7 +30,6 @@ async def inbound_create(request):
             data = await request.json()
             inbound = models.InboundModel(**data["inbound"])
             inbound.tls = models.TlsModel(**data["tls"])
-            print(inbound.tls)
             inbound.users = [models.UserModel(**user) for user in data["users"]]
             session.add(inbound)
             session.add(inbound.tls)
