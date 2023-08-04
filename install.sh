@@ -37,11 +37,6 @@ install_docker_and_redis() {
         echo "Unsupported OS. Only Ubuntu and CentOS are supported."
         exit 1
     fi
-
-    # Pull Redis image
-    sudo docker pull redis
-    # Run Redis container with port 4323 mapped to 6379
-    sudo docker run -d -p 4323:6379 --name redis-container redis
 }
 
 # Function to install the project
@@ -75,8 +70,11 @@ install_project() {
   default_port=8000
   port=${api_port:-$default_port}
 
+  read -p "Enter database IP: " db_ip
+  read -p "Enter database port: " db_port
+
   auth_key=$(generate_token)
-  echo -e "AUTH_KEY=$auth_key\nAPI_PORT=$port\nFORTIFY_SERVER_VERSION=1.0.0\nSINGBOX_VERSION=1.3.0" > .env
+  echo -e "AUTH_KEY=$auth_key\nAPI_PORT=$port\nDB_IP=$db_ip\nDB_PORT=$db_port\nFORTIFY_SERVER_VERSION=1.0.0\nSINGBOX_VERSION=1.3.0" > .env
 
   # Step 4: Downlaod and extract sing-box binary
   echo "Step 4: Downloading sing-box..."

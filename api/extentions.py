@@ -7,8 +7,11 @@ config = Config('.env')
 DATABASE = config('DATABASE', default='sqlite:///fortify.db')
 AUTH_KEY = config('AUTH_KEY')
 API_PORT = config('API_PORT', cast=int, default=8000)
+DB_IP = config('DB_IP', cast=str)
+DB_PORT = config('DB_PORT', cast=int)
+
 engine = create_engine(DATABASE)
-redis_client = redis.StrictRedis(host='0.0.0.0', port=4323)
+redis_client = redis.StrictRedis(host=DB_IP, port=DB_PORT)
 
 def realod_singbox():
     pass
