@@ -41,7 +41,9 @@ class InboundModel(SQLModel, table=True):
 
     def to_singbox_dict(self):
         data = self.dict(
-                    exclude={'id', 'traffic_usage', 'traffic_limitation', 'creation_date', 'expiration_date', 'is_active'},
+                    exclude={
+                        'id', 'traffic_usage', 'traffic_limitation', 'creation_date',
+                        'expiration_date', 'is_active', 'download', 'upload'},
                     exclude_none=True
                 )
         data["users"] = [user.dict(exclude={'id', 'inbound_id'}) for user in self.users]

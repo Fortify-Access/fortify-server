@@ -60,11 +60,11 @@ async def check_traffic_usages():
 async def commit_traffic_usages_to_db(period: int):
     while True:
         await asyncio.sleep(period)
-        for port in extentions.redis_client.smembers('active_ports'):
-            port = int(port)
-            upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
-            download = int(extentions.redis_client.get(f"download_{port}") or 0)
-            with Session(extentions.engine) as session:
+        with Session(extentions.engine) as session:
+            for port in extentions.redis_client.smembers('active_ports'):
+                port = int(port)
+                upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
+                download = int(extentions.redis_client.get(f"download_{port}") or 0)
                 query = select(models.InboundModel).where(models.InboundModel.listen_port == port)
                 inbound = session.exec(query).first()
                 if inbound:

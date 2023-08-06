@@ -1,5 +1,6 @@
 from sqlmodel import create_engine
 from starlette.config import Config
+import subprocess
 import json
 import redis
 
@@ -14,7 +15,11 @@ engine = create_engine(DATABASE)
 redis_client = redis.StrictRedis(host=DB_IP, port=DB_PORT)
 
 def realod_singbox():
-    pass
+    try:
+        subprocess.check_output(["systemctl", "restart", "singbox.service"])
+        return True
+    except Exception as e:
+        raise e
 
 def import_inbound(inbound_dict):
     with open('singbox/config.json', 'r') as config:

@@ -18,7 +18,7 @@ async def inbound_get_last_updates(request):
             query = select(models.InboundModel)
             results = session.exec(query).all()
             return JSONResponse({"success": True, "inbounds": [result.dict(include={'tag', 'upload', 'download', 'traffic_usage', 'is_active'}) | {
-                'online_clients': extentions.redis_client.smembers(f"online_{result.listen_port}")
+                'online_clients': [str(ip) for ip in extentions.redis_client.smembers(f"online_{result.listen_port}")]
             } for result in results]})
 
         except Exception as e:
