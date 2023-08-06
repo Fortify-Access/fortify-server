@@ -2,7 +2,7 @@ import asyncio
 import pytz
 from datetime import datetime
 from sqlmodel import Session, select
-from scapy.all import AsyncSniffer, TCP
+from scapy.all import AsyncSniffer, TCP, IP
 from api import models, extentions
 
 async def check_expirations(period: int):
@@ -35,17 +35,17 @@ async def check_traffic_usages():
     def packet_callback(packet):
         if extentions.redis_client.sismember('active_ports', packet[TCP].sport):
             port = packet[TCP].sport
-            upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
-            upload += len(packet)
-            extentions.redis_client.set(f"upload_{port}", upload)
-            client_ip = packet[TCP].src
-
-        elif extentions.redis_client.sismember('active_ports', packet[TCP].dport):
-            port = packet[TCP].dport
             download = int(extentions.redis_client.get(f"download_{port}") or 0)
             download += len(packet)
             extentions.redis_client.set(f"download_{port}", download)
-            client_ip = packet[TCP].dst
+            client_ip = packet[IP].dst
+
+        elif extentions.redis_client.sismember('active_ports', packet[TCP].dport):
+            port = packet[TCP].dport
+            upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
+            upload += len(packet)
+            extentions.redis_client.set(f"upload_{port}", upload)
+            client_ip = packet[IP].src
 
         else:
             return
@@ -71,7 +71,6 @@ async def commit_traffic_usages_to_db(period: int):
                     inbound.upload = upload
                     inbound.download = download
                     inbound.traffic_usage = upload + download
-                    print(inbound.traffic_usage)
                     session.add(inbound)
                     session.commit()
                     continue
