@@ -119,7 +119,7 @@ async def inbound_update(request):
                 extentions.redis_client.delete(f"download_{old_inbound.listen_port}")
 
             if "is_active" in updated_fields["inbound"].keys():
-                if not (old_inbound.is_active == True and inbound.is_active == False):
+                if not (((old_inbound.is_active == True and inbound.is_active == False)) and ((old_inbound.is_active == False and inbound.is_active == False))):
                     extentions.import_inbound(inbound.to_singbox_dict())
                     extentions.redis_client.sadd('active_ports', inbound.listen_port)
 
