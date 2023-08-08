@@ -10,7 +10,8 @@ from api import extentions
 @contextlib.asynccontextmanager
 async def lifespan(app):
     asyncio.create_task(tasks.check_expirations(300))
-    asyncio.create_task(tasks.check_traffic_usages())
+    asyncio.create_task(tasks.check_online_clients())
+    asyncio.create_task(tasks.traffic_usage_handler(200))
     asyncio.create_task(tasks.commit_traffic_usages_to_db(5))
     yield
 

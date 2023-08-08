@@ -1,5 +1,7 @@
 import asyncio
 import pytz
+import dpkt
+import subprocess
 from datetime import datetime
 from sqlmodel import Session, select
 from scapy.all import AsyncSniffer, TCP, IP
@@ -31,20 +33,14 @@ async def check_reached_traffic_limitaion(period: int):
             session.commit()
         await asyncio.sleep(period)
 
-async def check_traffic_usages():
+async def check_online_clients():
     def packet_callback(packet):
         if extentions.redis_client.sismember('active_ports', packet[TCP].sport):
             port = packet[TCP].sport
-            download = int(extentions.redis_client.get(f"download_{port}") or 0)
-            download += len(packet)
-            extentions.redis_client.set(f"download_{port}", download)
             client_ip = packet[IP].dst
 
         elif extentions.redis_client.sismember('active_ports', packet[TCP].dport):
             port = packet[TCP].dport
-            upload = int(extentions.redis_client.get(f"upload_{port}") or 0)
-            upload += len(packet)
-            extentions.redis_client.set(f"upload_{port}", upload)
             client_ip = packet[IP].src
 
         else:
@@ -54,8 +50,38 @@ async def check_traffic_usages():
             extentions.redis_client.sadd(f"online_{port}", client_ip)
             extentions.redis_client.expire(f"online_{port}", 30, nx=True)
 
-    sniffer = AsyncSniffer(filter="tcp", prn=packet_callback)
+    sniffer = AsyncSniffer(filter="tcp", prn=packet_callback, store=0)
     sniffer.start()
+
+async def analyze_packets():
+    async with open('/var/log/tcpdump/packets.pcap', 'rb') as packets_file:
+        pcap = dpkt.pcap.Reader(packets_file)
+        async for timestamp, packet in pcap:
+            eth = dpkt.ethernet.Ethernet(packet)
+            if isinstance(eth.data, dpkt.ip.IP):
+                yield eth.data.data.sport, eth.data.data.dport, len(packet)
+
+async def traffic_usage_handler(period: int):
+    subprocess.check_output(["kill", "-9", "$(ps aux | grep tcpdump)"])
+    subprocess.check_output(["tcpdump", "tcp", "-w", "/var/log/tcpdump/packets.pcap"])
+
+    while True:
+        await asyncio.sleep(period)
+        async for src_port, dst_port, packet_length in analyze_packets():
+            if extentions.redis_client.sismember('active_ports', src_port):
+                download = int(extentions.redis_client.get(f"download_{src_port}") or 0)
+                download += packet_length
+                extentions.redis_client.set(f"download_{src_port}", download)
+                print(download)
+
+            elif extentions.redis_client.sismember('active_ports', dst_port):
+                upload = int(extentions.redis_client.get(f"upload_{dst_port}") or 0)
+                upload += packet_length
+                extentions.redis_client.set(f"upload_{src_port}", upload)
+                print(upload)
+
+            else:
+                continue
 
 async def commit_traffic_usages_to_db(period: int):
     while True:
