@@ -79,6 +79,7 @@ async def traffic_usage_handler(period: int):
 
             else:
                 continue
+        subprocess.run(["truncate", "-s", "0", "/var/log/tcpdump/packets.pcap"])
 
 async def commit_traffic_usages_to_db(period: int):
     while True:
