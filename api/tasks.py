@@ -54,20 +54,17 @@ async def check_online_clients():
     sniffer.start()
 
 async def analyze_packets():
-    async with open('/var/log/tcpdump/packets.pcap', 'rb') as packets_file:
+    with open('/var/log/tcpdump/packets.pcap', 'rb') as packets_file:
         pcap = dpkt.pcap.Reader(packets_file)
-        async for timestamp, packet in pcap:
+        for timestamp, packet in pcap:
             eth = dpkt.ethernet.Ethernet(packet)
             if isinstance(eth.data, dpkt.ip.IP):
                 yield eth.data.data.sport, eth.data.data.dport, len(packet)
 
 async def traffic_usage_handler(period: int):
-    subprocess.check_output(["kill", "-9", "$(ps aux | grep tcpdump)"])
-    subprocess.check_output(["tcpdump", "tcp", "-w", "/var/log/tcpdump/packets.pcap"])
-
     while True:
         await asyncio.sleep(period)
-        async for src_port, dst_port, packet_length in analyze_packets():
+        for src_port, dst_port, packet_length in analyze_packets():
             if extentions.redis_client.sismember('active_ports', src_port):
                 download = int(extentions.redis_client.get(f"download_{src_port}") or 0)
                 download += packet_length
@@ -77,7 +74,7 @@ async def traffic_usage_handler(period: int):
             elif extentions.redis_client.sismember('active_ports', dst_port):
                 upload = int(extentions.redis_client.get(f"upload_{dst_port}") or 0)
                 upload += packet_length
-                extentions.redis_client.set(f"upload_{src_port}", upload)
+                extentions.redis_client.set(f"upload_{dst_port}", upload)
                 print(upload)
 
             else:
