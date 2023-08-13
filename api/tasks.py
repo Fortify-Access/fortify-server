@@ -53,13 +53,15 @@ async def check_online_clients():
     sniffer = AsyncSniffer(filter="tcp", prn=packet_callback, store=0)
     sniffer.start()
 
-async def analyze_packets():
-    with open('/var/log/tcpdump/packets.pcap', 'rb') as packets_file:
+def analyze_packets():
+    with open('/var/log/tcpdump/packets.pcap', 'r+b') as packets_file:
         pcap = dpkt.pcap.Reader(packets_file)
         for timestamp, packet in pcap:
             eth = dpkt.ethernet.Ethernet(packet)
             if isinstance(eth.data, dpkt.ip.IP):
                 yield eth.data.data.sport, eth.data.data.dport, len(packet)
+
+        packets_file.truncate(24)
 
 async def traffic_usage_handler(period: int):
     while True:
@@ -79,7 +81,6 @@ async def traffic_usage_handler(period: int):
 
             else:
                 continue
-        subprocess.run(["truncate", "-s", "0", "/var/log/tcpdump/packets.pcap"])
 
 async def commit_traffic_usages_to_db(period: int):
     while True:
