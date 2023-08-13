@@ -57,9 +57,14 @@ def analyze_packets():
     with open('/var/log/tcpdump/packets.pcap', 'r+b') as packets_file:
         pcap = dpkt.pcap.Reader(packets_file)
         for timestamp, packet in pcap:
-            eth = dpkt.ethernet.Ethernet(packet)
-            if isinstance(eth.data, dpkt.ip.IP):
-                yield eth.data.data.sport, eth.data.data.dport, len(packet)
+            if (packet_length := len(packet)) >= 14:
+                eth = dpkt.ethernet.Ethernet(packet)
+                if isinstance(eth.data, dpkt.ip.IP):
+                    try:
+                        yield eth.data.data.sport, eth.data.data.dport, packet_length
+                    except Exception as e:
+                        print(e)
+                        continue
 
         packets_file.truncate(24)
 
