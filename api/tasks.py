@@ -1,6 +1,6 @@
 import asyncio
 import pytz
-import dpkt
+import pyshark
 import subprocess
 from datetime import datetime
 from sqlmodel import Session, select
@@ -54,19 +54,17 @@ async def check_online_clients():
     sniffer.start()
 
 def analyze_packets():
-    with open('/var/log/tcpdump/packets.pcap', 'r+b') as packets_file:
-        pcap = dpkt.pcap.Reader(packets_file)
-        for timestamp, packet in pcap:
-            if (packet_length := len(packet)) >= 14:
-                eth = dpkt.ethernet.Ethernet(packet)
-                if isinstance(eth.data, dpkt.ip.IP):
-                    try:
-                        yield eth.data.data.sport, eth.data.data.dport, packet_length
-                    except Exception as e:
-                        print(e)
-                        continue
+    pcap = pyshark.FileCapture('/var/log/tcpdump/packets.cap', keep_packets=False)
+    for packet in pcap:
+        try:
+            if hasattr(packet, 'tcp'):
+                yield int(packet.tcp.srcport), int(packet.tcp.dstport), int(packet.length)
+            else:
+                continue
+        except Exception as e:
+            print(e)
+            continue
 
-        packets_file.truncate(24)
 
 async def traffic_usage_handler(period: int):
     while True:
