@@ -7,7 +7,6 @@ idna==3.4
 lxml==4.9.3
 packaging==23.1
 pydantic==1.10.11
-pyshark==0.6
 python-dotenv==1.0.0
 pytz==2023.3
 redis==4.6.0
