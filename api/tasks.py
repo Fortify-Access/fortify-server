@@ -57,13 +57,11 @@ async def traffic_usage_handler(period: int):
             download = int(extentions.redis_client.get(f"download_{packet[TCP].sport}") or 0)
             download += len(packet)
             extentions.redis_client.set(f"download_{packet[TCP].sport}", download)
-            print(download)
 
         elif extentions.redis_client.sismember('active_ports', packet[TCP].dport):
             upload = int(extentions.redis_client.get(f"upload_{packet[TCP].dport}") or 0)
             upload += len(packet)
             extentions.redis_client.set(f"upload_{packet[TCP].dport}", upload)
-            print(upload)
 
     while True:
         await asyncio.sleep(period)

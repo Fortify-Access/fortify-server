@@ -5,7 +5,7 @@ After=singbox.service
 [Service]
 Type=exec
 ExecStartPre=/bin/rm -f /var/log/tcpdump/packets.cap
-ExecStart=/usr/sbin/tcpdump -w /var/log/tcpdump/packets.cap 'tcp and not (port 443 or port 22)'
+ExecStart=/bin/tcpdump -w /var/log/tcpdump/packets.cap 'tcp and not (port 443 or port 22)'
 Restart=always
 
 [Install]
