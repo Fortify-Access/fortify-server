@@ -4,7 +4,7 @@ import pyshark
 import subprocess
 from datetime import datetime
 from sqlmodel import Session, select
-from scapy.all import AsyncSniffer, TCP, IP
+from scapy.all import sniff, AsyncSniffer, TCP, IP
 from api import models, extentions
 
 async def check_expirations(period: int):
@@ -53,37 +53,24 @@ async def check_online_clients():
     sniffer = AsyncSniffer(filter="tcp", prn=packet_callback, store=0)
     sniffer.start()
 
-def analyze_packets():
-    pcap = pyshark.FileCapture('/var/log/tcpdump/packets.cap', keep_packets=False)
-    for packet in pcap:
-        try:
-            if hasattr(packet, 'tcp'):
-                yield int(packet.tcp.srcport), int(packet.tcp.dstport), int(packet.length)
-            else:
-                continue
-        except Exception as e:
-            print(e)
-            continue
-
-
 async def traffic_usage_handler(period: int):
+    def packet_callback(packet):
+        if extentions.redis_client.sismember('active_ports', packet[TCP].sport):
+            download = int(extentions.redis_client.get(f"download_{packet[TCP].sport}") or 0)
+            download += len(packet)
+            extentions.redis_client.set(f"download_{packet[TCP].sport}", download)
+            print(download)
+
+        elif extentions.redis_client.sismember('active_ports', packet[TCP].dport):
+            upload = int(extentions.redis_client.get(f"upload_{packet[TCP].dport}") or 0)
+            upload += len(packet)
+            extentions.redis_client.set(f"upload_{packet[TCP].dport}", upload)
+            print(upload)
+
     while True:
         await asyncio.sleep(period)
-        for src_port, dst_port, packet_length in analyze_packets():
-            if extentions.redis_client.sismember('active_ports', src_port):
-                download = int(extentions.redis_client.get(f"download_{src_port}") or 0)
-                download += packet_length
-                extentions.redis_client.set(f"download_{src_port}", download)
-                print(download)
-
-            elif extentions.redis_client.sismember('active_ports', dst_port):
-                upload = int(extentions.redis_client.get(f"upload_{dst_port}") or 0)
-                upload += packet_length
-                extentions.redis_client.set(f"upload_{dst_port}", upload)
-                print(upload)
-
-            else:
-                continue
+        sniffer = AsyncSniffer(offline='/var/log/tcpdump/packets.cap', prn=packet_callback, store=0)
+        sniffer.start()
 
 async def commit_traffic_usages_to_db(period: int):
     while True:
