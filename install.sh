@@ -101,7 +101,13 @@ install_project() {
   systemctl enable singbox.service
   systemctl start singbox.service
 
-  # Step 7: Prepare package names
+  # Step 7: Configure and start tcpdump service
+  echo "Step 6: Configuring and starting tcpdump service..."
+  cp /opt/fortify-server/services/tcpdump.service /etc/systemd/system/
+  systemctl enable tcpdump.service
+  systemctl start tcpdump.service
+
+  # Step 8: Prepare package names
   echo "Step 7: Prepare package names..."
   # Download the latest release package (.tar.gz) from GitHub
   curl -sLo "/opt/fortify-server/${package_name}.tar.gz" $package_url
