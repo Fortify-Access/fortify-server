@@ -1,10 +1,8 @@
 import asyncio
 import pytz
-import pyshark
-import subprocess
 from datetime import datetime
 from sqlmodel import Session, select
-from scapy.all import sniff, AsyncSniffer, TCP, IP
+from scapy.all import AsyncSniffer, TCP, IP
 from api import models, extentions
 
 async def check_expirations(period: int):
@@ -69,8 +67,9 @@ async def traffic_usage_handler(period: int):
 
     while True:
         await asyncio.sleep(period)
-        sniffer = AsyncSniffer(offline='/var/log/tcpdump/packets.cap', prn=packet_callback, store=0)
+        sniffer = AsyncSniffer(offline='/var/log/tcpdump/packets.cap', filter='tcp', prn=packet_callback, store=0)
         sniffer.start()
+        extentions.reload_tcpdump()
 
 async def commit_traffic_usages_to_db(period: int):
     while True:
