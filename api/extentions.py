@@ -21,6 +21,13 @@ def realod_singbox():
     except Exception as e:
         raise e
 
+def reload_tcpdump():
+    try:
+        subprocess.check_output(["systemctl", "restart", "tcpdump.service"])
+        return True
+    except Exception as e:
+        raise e
+
 def import_inbound(inbound_dict):
     with open('singbox/config.json', 'r') as config:
         json_config = json.loads(config.read())
